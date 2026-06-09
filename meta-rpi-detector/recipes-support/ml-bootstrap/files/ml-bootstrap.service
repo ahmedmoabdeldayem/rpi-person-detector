@@ -1,0 +1,17 @@
+[Unit]
+Description=First-boot ML dependency installer (ultralytics + YOLOv8n weights)
+After=network-online.target
+Wants=network-online.target
+# Only run if the stamp file does not exist yet
+ConditionPathExists=!/var/lib/ml-bootstrap/done
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/ml-bootstrap
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ml-bootstrap
+
+[Install]
+WantedBy=multi-user.target

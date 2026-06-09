@@ -1,0 +1,13 @@
+# Yocto build outputs (keep build/conf/)
+build/tmp/
+build/cache/
+build/downloads/
+build/sstate-cache/
+
+# Python
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+

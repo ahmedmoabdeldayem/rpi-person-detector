@@ -1,0 +1,18 @@
+[Unit]
+Description=Person Detection Service (YOLOv8 + MQTT)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/rpi-person-detector
+ExecStart=/home/pi/rpi-person-detector/venv/bin/python3 /home/pi/rpi-person-detector/src/detector.py
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=person-detector
+
+[Install]
+WantedBy=multi-user.target
