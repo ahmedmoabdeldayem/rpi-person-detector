@@ -1,6 +1,7 @@
 import json
-import time
 import logging
+import time
+
 import paho.mqtt.client as mqtt
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ class MQTTPublisher:
             while not self._connected and time.time() < deadline:
                 time.sleep(0.05)
             return self._connected
-        except Exception as exc:
+        except (OSError, ConnectionRefusedError) as exc:
             logger.error("Could not reach MQTT broker: %s", exc)
             return False
 

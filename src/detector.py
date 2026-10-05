@@ -7,21 +7,28 @@ an MQTT event whenever a person is detected with sufficient confidence.
 A cooldown timer prevents flooding the broker when a person stays in frame.
 """
 
+import logging
 import signal
 import sys
 import time
-import logging
 from datetime import datetime, timezone
 
 import cv2
 from ultralytics import YOLO
 
 from config import (
-    CAMERA_INDEX, FRAME_WIDTH, FRAME_HEIGHT,
-    YOLO_MODEL, YOLO_INPUT_SIZE, YOLO_CONFIDENCE_THRESHOLD,
+    CAMERA_INDEX,
     DETECTION_COOLDOWN_SECONDS,
-    MQTT_BROKER_HOST, MQTT_BROKER_PORT, MQTT_CLIENT_ID,
-    MQTT_TOPIC_DETECTION, MQTT_TOPIC_STATUS,
+    FRAME_HEIGHT,
+    FRAME_WIDTH,
+    MQTT_BROKER_HOST,
+    MQTT_BROKER_PORT,
+    MQTT_CLIENT_ID,
+    MQTT_TOPIC_DETECTION,
+    MQTT_TOPIC_STATUS,
+    YOLO_CONFIDENCE_THRESHOLD,
+    YOLO_INPUT_SIZE,
+    YOLO_MODEL,
 )
 from mqtt_publisher import MQTTPublisher
 
@@ -93,8 +100,7 @@ def main():
                     # COCO class 0 == 'person'
                     if cls == 0 and conf >= YOLO_CONFIDENCE_THRESHOLD:
                         person_count += 1
-                        if conf > best_conf:
-                            best_conf = conf
+                        best_conf = max(best_conf, conf)
 
             now = time.monotonic()
             if person_count > 0 and (now - last_published) >= DETECTION_COOLDOWN_SECONDS:
