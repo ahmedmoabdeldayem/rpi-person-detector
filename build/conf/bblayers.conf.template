@@ -3,7 +3,8 @@ POKY_BBLAYERS_CONF_VERSION = "2"
 BBPATH = "${TOPDIR}"
 BBFILES ?= ""
 
-# Adjust all paths below to match where you cloned each layer
+# Copy this file to bblayers.conf and adjust paths to match your machine.
+# Run: cp build/conf/bblayers.conf.template build/conf/bblayers.conf
 BBLAYERS ?= " \
   /opt/yocto/poky/meta \
   /opt/yocto/poky/meta-poky \

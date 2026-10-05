@@ -1,34 +1,31 @@
+# Copy this file to local.conf and adjust as needed.
+# Run: cp build/conf/local.conf.template build/conf/local.conf
+
 # Target machine
 MACHINE ?= "raspberrypi4-64"
 
-# Use Poky as base distribution
 DISTRO ?= "poky"
 
-# systemd as init system
 DISTRO_FEATURES:append = " systemd"
 VIRTUAL-RUNTIME_init_manager = "systemd"
 DISTRO_FEATURES_BACKFILL_CONSIDERED:append = " sysvinit"
 VIRTUAL-RUNTIME_initscripts = "systemd-compat-units"
 
-# Enable the Pi camera via v4l2
 MACHINE_FEATURES:append = " camera"
 VIDEO_CAMERA = "1"
 
-# Package format
-PACKAGE_CLASSES ?= "package_rpm"
+PACKAGE_CLASSES ?= "package_ipk"
 
-# Enable debug tweaks during development (removes root password etc.)
+# Remove debug-tweaks before any production/security-sensitive deployment
 EXTRA_IMAGE_FEATURES ?= "debug-tweaks"
 
-# Download and sstate cache directories (adjust to your paths)
+# Adjust to your local paths
 DL_DIR ?= "${TOPDIR}/../downloads"
 SSTATE_DIR ?= "${TOPDIR}/../sstate-cache"
 
-# Parallelism
 BB_NUMBER_THREADS ?= "4"
 PARALLEL_MAKE ?= "-j4"
 
-# Larger rootfs needed for Python + OpenCV
 IMAGE_ROOTFS_SIZE = "2097152"
 
 BB_DISKMON_DIRS ??= "\

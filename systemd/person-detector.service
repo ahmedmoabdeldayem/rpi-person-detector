@@ -6,8 +6,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/rpi-person-detector
-ExecStart=/home/pi/rpi-person-detector/venv/bin/python3 /home/pi/rpi-person-detector/src/detector.py
+WorkingDirectory=%h/rpi-person-detector
+ExecStart=%h/rpi-person-detector/venv/bin/python3 %h/rpi-person-detector/src/detector.py
 Restart=on-failure
 RestartSec=5s
 StandardOutput=journal

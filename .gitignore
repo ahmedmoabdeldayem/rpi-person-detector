@@ -1,8 +1,15 @@
-# Yocto build outputs (keep build/conf/)
+# Yocto build outputs
 build/tmp/
 build/cache/
 build/downloads/
 build/sstate-cache/
+
+# Machine-specific build config (copy from *.template to get started)
+build/conf/bblayers.conf
+build/conf/local.conf
+
+# YOLO model weights (downloaded at runtime)
+*.pt
 
 # Python
 __pycache__/
