@@ -1,6 +1,6 @@
 import os
 
-MQTT_BROKER_HOST = os.environ.get("MQTT_BROKER_HOST", "192.168.1.100")
+MQTT_BROKER_HOST = os.environ.get("MQTT_BROKER_HOST", "your-mqtt-broker-ip")
 MQTT_BROKER_PORT = int(os.environ.get("MQTT_BROKER_PORT", "1883"))
 MQTT_CLIENT_ID   = os.environ.get("MQTT_CLIENT_ID", "person-detector-pi")
 MQTT_TOPIC_DETECTION = "home/detection/person"
