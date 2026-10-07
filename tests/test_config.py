@@ -15,7 +15,7 @@ def reload_config(env):
 def test_default_broker_host():
     os.environ.pop("MQTT_BROKER_HOST", None)
     cfg = reload_config({})
-    assert cfg.MQTT_BROKER_HOST == "192.168.1.100"
+    assert cfg.MQTT_BROKER_HOST == "your-mqtt-broker-ip"
 
 
 def test_env_overrides_broker_host():
