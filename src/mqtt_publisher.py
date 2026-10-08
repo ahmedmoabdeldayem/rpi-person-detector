@@ -52,7 +52,7 @@ class MQTTPublisher:
             return False
         try:
             result.wait_for_publish(timeout=2.0)
-        except Exception as exc:
+        except ValueError as exc:
             logger.warning("Publish acknowledgement timed out: %s", exc)
             return False
         return True
