@@ -27,7 +27,8 @@ class MQTTPublisher:
     def _on_disconnect(self, client, userdata, rc):
         self._connected = False
         if rc != 0:
-            logger.warning("Unexpected MQTT disconnect, rc=%d", rc)
+            logger.warning("Unexpected MQTT disconnect, rc=%d — paho will attempt reconnect", rc)
+            self._client.reconnect_delay_set(min_delay=1, max_delay=30)
 
     def connect(self, timeout: float = 5.0) -> bool:
         try:
@@ -48,6 +49,11 @@ class MQTTPublisher:
         result = self._client.publish(topic, json.dumps(payload), qos=1)
         if result.rc != mqtt.MQTT_ERR_SUCCESS:
             logger.error("Publish failed, rc=%d", result.rc)
+            return False
+        try:
+            result.wait_for_publish(timeout=2.0)
+        except Exception as exc:
+            logger.warning("Publish acknowledgement timed out: %s", exc)
             return False
         return True
 

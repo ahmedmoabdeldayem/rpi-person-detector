@@ -55,6 +55,13 @@ def main():
     signal.signal(signal.SIGTERM, _handle_signal)
     signal.signal(signal.SIGINT, _handle_signal)
 
+    if MQTT_BROKER_HOST == "your-mqtt-broker-ip":
+        logger.error(
+            "MQTT_BROKER_HOST is not configured — set the MQTT_BROKER_HOST "
+            "environment variable to your broker's IP address before starting."
+        )
+        sys.exit(1)
+
     logger.info("Loading YOLOv8n model (%s)...", YOLO_MODEL)
     model = YOLO(YOLO_MODEL)
 
@@ -79,14 +86,30 @@ def main():
                 YOLO_CONFIDENCE_THRESHOLD, DETECTION_COOLDOWN_SECONDS)
 
     last_published = 0.0
+    last_inference = 0.0
+    consecutive_failures = 0
+    _MAX_CONSECUTIVE_FAILURES = 30
+    _MIN_INFERENCE_INTERVAL = 0.2  # cap inference at ~5 fps to avoid pegging the CPU
 
     try:
         while _running:
             ret, frame = cap.read()
             if not ret:
-                logger.warning("Frame read failed — retrying")
+                consecutive_failures += 1
+                logger.warning("Frame read failed — retrying (%d/%d)",
+                               consecutive_failures, _MAX_CONSECUTIVE_FAILURES)
+                if consecutive_failures >= _MAX_CONSECUTIVE_FAILURES:
+                    logger.error("Camera failed %d consecutive times — giving up",
+                                 _MAX_CONSECUTIVE_FAILURES)
+                    break
                 time.sleep(0.1)
                 continue
+            consecutive_failures = 0
+
+            now = time.monotonic()
+            if (now - last_inference) < _MIN_INFERENCE_INTERVAL:
+                continue
+            last_inference = now
 
             results = model(frame, imgsz=YOLO_INPUT_SIZE, verbose=False)
 
