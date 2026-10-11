@@ -16,6 +16,7 @@ class MQTTPublisher:
         self._client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=client_id)
         self._client.on_connect = self._on_connect
         self._client.on_disconnect = self._on_disconnect
+        self._client.reconnect_delay_set(min_delay=1, max_delay=30)
 
     def _on_connect(self, client, userdata, flags, rc):
         if rc == 0:
@@ -28,7 +29,6 @@ class MQTTPublisher:
         self._connected = False
         if rc != 0:
             logger.warning("Unexpected MQTT disconnect, rc=%d — paho will attempt reconnect", rc)
-            self._client.reconnect_delay_set(min_delay=1, max_delay=30)
 
     def connect(self, timeout: float = 5.0) -> bool:
         try:
@@ -52,8 +52,8 @@ class MQTTPublisher:
             return False
         try:
             result.wait_for_publish(timeout=2.0)
-        except ValueError as exc:
-            logger.warning("Publish acknowledgement timed out: %s", exc)
+        except (ValueError, RuntimeError) as exc:
+            logger.warning("Publish acknowledgement failed: %s", exc)
             return False
         return True
 

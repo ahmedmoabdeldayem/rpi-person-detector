@@ -76,22 +76,23 @@ def main():
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
 
-    if not cap.isOpened():
-        logger.error("Cannot open camera at index %d", CAMERA_INDEX)
-        mqtt.publish(MQTT_TOPIC_STATUS, {"status": "error", "reason": "camera_unavailable", "timestamp": _now_iso()})
-        mqtt.disconnect()
-        sys.exit(1)
-
-    logger.info("Camera open. Starting detection loop (confidence >= %.2f, cooldown %ds)",
-                YOLO_CONFIDENCE_THRESHOLD, DETECTION_COOLDOWN_SECONDS)
-
     last_published = 0.0
     last_inference = 0.0
     consecutive_failures = 0
     _MAX_CONSECUTIVE_FAILURES = 30
     _MIN_INFERENCE_INTERVAL = 0.2  # cap inference at ~5 fps to avoid pegging the CPU
 
+    # Unified try/finally so cap.release() and mqtt.disconnect() always run,
+    # including when cap.isOpened() fails before the detection loop starts.
     try:
+        if not cap.isOpened():
+            logger.error("Cannot open camera at index %d", CAMERA_INDEX)
+            mqtt.publish(MQTT_TOPIC_STATUS, {"status": "error", "reason": "camera_unavailable", "timestamp": _now_iso()})
+            return
+
+        logger.info("Camera open. Starting detection loop (confidence >= %.2f, cooldown %ds)",
+                    YOLO_CONFIDENCE_THRESHOLD, DETECTION_COOLDOWN_SECONDS)
+
         while _running:
             ret, frame = cap.read()
             if not ret:
@@ -139,6 +140,7 @@ def main():
 
     finally:
         cap.release()
+        cap = None
         mqtt.publish(MQTT_TOPIC_STATUS, {"status": "offline", "timestamp": _now_iso()})
         mqtt.disconnect()
         logger.info("Detector stopped cleanly")
