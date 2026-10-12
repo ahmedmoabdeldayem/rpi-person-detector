@@ -48,7 +48,7 @@ def _handle_signal(sig, frame):
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(tz=timezone.utc).isoformat()
 
 
 def main():
