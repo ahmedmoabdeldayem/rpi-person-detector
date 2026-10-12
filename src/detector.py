@@ -11,7 +11,7 @@ import logging
 import signal
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import cv2
 from ultralytics import YOLO
@@ -40,15 +40,19 @@ logger = logging.getLogger("detector")
 
 _running = True
 
+# Inference is capped at this interval to avoid pegging the CPU.
+MIN_INFERENCE_INTERVAL = 0.2
+# Camera must fail this many consecutive times before the loop exits.
+MAX_CONSECUTIVE_FAILURES = 30
 
-def _handle_signal(sig, frame):
+
+def _handle_signal(sig, _frame):
     global _running
-    logger.info("Signal %d received — shutting down", sig)
     _running = False
 
 
 def _now_iso() -> str:
-    return datetime.now(tz=timezone.utc).isoformat()
+    return datetime.now(tz=UTC).isoformat()
 
 
 def main():
@@ -79,8 +83,6 @@ def main():
     last_published = 0.0
     last_inference = 0.0
     consecutive_failures = 0
-    _MAX_CONSECUTIVE_FAILURES = 30
-    _MIN_INFERENCE_INTERVAL = 0.2  # cap inference at ~5 fps to avoid pegging the CPU
 
     # Unified try/finally so cap.release() and mqtt.disconnect() always run,
     # including when cap.isOpened() fails before the detection loop starts.
@@ -98,17 +100,17 @@ def main():
             if not ret:
                 consecutive_failures += 1
                 logger.warning("Frame read failed — retrying (%d/%d)",
-                               consecutive_failures, _MAX_CONSECUTIVE_FAILURES)
-                if consecutive_failures >= _MAX_CONSECUTIVE_FAILURES:
+                               consecutive_failures, MAX_CONSECUTIVE_FAILURES)
+                if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
                     logger.error("Camera failed %d consecutive times — giving up",
-                                 _MAX_CONSECUTIVE_FAILURES)
+                                 MAX_CONSECUTIVE_FAILURES)
                     break
                 time.sleep(0.1)
                 continue
             consecutive_failures = 0
 
             now = time.monotonic()
-            if (now - last_inference) < _MIN_INFERENCE_INTERVAL:
+            if (now - last_inference) < MIN_INFERENCE_INTERVAL:
                 continue
             last_inference = now
 
@@ -140,7 +142,6 @@ def main():
 
     finally:
         cap.release()
-        cap = None
         mqtt.publish(MQTT_TOPIC_STATUS, {"status": "offline", "timestamp": _now_iso()})
         mqtt.disconnect()
         logger.info("Detector stopped cleanly")

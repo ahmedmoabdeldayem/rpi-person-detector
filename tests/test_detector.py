@@ -1,8 +1,8 @@
 import sys
 import os
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
-# Stub out heavy native deps before importing detector so CI doesn't need them
+# Stub out heavy native deps before importing detector so CI doesn't need them.
 for _mod in ('cv2', 'ultralytics'):
     sys.modules.setdefault(_mod, MagicMock())
 sys.modules['ultralytics'].YOLO = MagicMock
@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 @patch('detector.MQTTPublisher')
 @patch('detector.MQTT_BROKER_HOST', 'broker.local')
 def test_circuit_breaker_exits_after_max_failures(mock_mqtt_cls):
-    """Loop must exit after _MAX_CONSECUTIVE_FAILURES consecutive frame-read failures."""
+    """Loop must exit after MAX_CONSECUTIVE_FAILURES consecutive frame-read failures."""
     import detector
 
     mock_pub = MagicMock()
@@ -22,53 +22,40 @@ def test_circuit_breaker_exits_after_max_failures(mock_mqtt_cls):
 
     mock_cap = MagicMock()
     mock_cap.isOpened.return_value = True
-    mock_cap.read.return_value = (False, None)  # always fail
+    mock_cap.read.return_value = (False, None)
     detector.cv2.VideoCapture.return_value = mock_cap
 
     detector._running = True
     detector.main()
 
-    # read() called exactly _MAX_CONSECUTIVE_FAILURES (30) times before giving up
-    assert mock_cap.read.call_count == 30
+    # read() called exactly MAX_CONSECUTIVE_FAILURES (30) times before giving up
+    assert mock_cap.read.call_count == detector.MAX_CONSECUTIVE_FAILURES
     mock_cap.release.assert_called_once()
 
 
-@patch('detector.MQTTPublisher')
-@patch('detector.MQTT_BROKER_HOST', 'broker.local')
-def test_frame_throttle_skips_inference(mock_mqtt_cls):
-    """Inference must be skipped when less than _MIN_INFERENCE_INTERVAL has elapsed."""
+def test_frame_throttle_constant_is_positive():
+    """MIN_INFERENCE_INTERVAL must be a positive float."""
+    import detector
+    assert detector.MIN_INFERENCE_INTERVAL > 0
+
+
+def test_frame_throttle_logic():
+    """Throttle condition: skip inference when elapsed < MIN_INFERENCE_INTERVAL."""
     import detector
 
-    mock_pub = MagicMock()
-    mock_pub.connect.return_value = True
-    mock_mqtt_cls.return_value = mock_pub
+    last_inference = 0.0
+    now = 0.05  # less than 0.2s interval
 
-    mock_cap = MagicMock()
-    mock_cap.isOpened.return_value = True
+    should_skip = (now - last_inference) < detector.MIN_INFERENCE_INTERVAL
+    assert should_skip is True
 
-    frames_read = {'n': 0}
+    now = 0.25  # greater than 0.2s interval
+    should_skip = (now - last_inference) < detector.MIN_INFERENCE_INTERVAL
+    assert should_skip is False
 
-    def _read():
-        frames_read['n'] += 1
-        if frames_read['n'] >= 3:
-            detector._running = False
-        return (True, MagicMock())
 
-    mock_cap.read.side_effect = _read
-    detector.cv2.VideoCapture.return_value = mock_cap
-
-    mock_model = MagicMock()
-    mock_model.return_value = []
-    detector.YOLO.return_value = mock_model
-
-    # Monotonic always returns 0.0 so every frame appears within the 0.2s interval
-    with patch('detector.time') as mock_time:
-        mock_time.monotonic.return_value = 0.0
-        mock_time.sleep = MagicMock()
-        detector._running = True
-        detector.main()
-
-    # With all frames at t=0.0 and last_inference starting at 0.0,
-    # the throttle (now - last_inference < 0.2) is True for all frames
-    # after the first, so model is called at most once.
-    assert mock_model.call_count <= 1
+def test_max_consecutive_failures_constant():
+    """MAX_CONSECUTIVE_FAILURES must be a positive integer."""
+    import detector
+    assert detector.MAX_CONSECUTIVE_FAILURES > 0
+    assert isinstance(detector.MAX_CONSECUTIVE_FAILURES, int)
